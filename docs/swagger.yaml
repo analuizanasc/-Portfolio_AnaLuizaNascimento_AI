@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: Recipe Book API
+  description: API REST para gerenciamento de caderno de receitas
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    RecipeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        link:
+          type: string
+          nullable: true
+        ingredientes:
+          type: array
+          items:
+            type: string
+        modoPreparo:
+          type: string
+        nivelDificuldade:
+          type: string
+          enum: [Facil, Media, Dificil]
+        categoria:
+          type: string
+          nullable: true
+          enum: [Doce, Salgada, Sem_gluten, Sem_lactose, Sem_acucar_refinado]
+        tempoPreparo:
+          type: string
+          nullable: true
+          example: "01:30"
+        notas:
+          type: string
+          nullable: true
+        isFavorited:
+          type: boolean
+        autor:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            nome:
+              type: string
+
+paths:
+  /users:
+    post:
+      summary: Cadastrar usuário
+      tags: [Usuários]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, email, senha]
+              properties:
+                nome:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  example: João Silva
+                email:
+                  type: string
+                  format: email
+                  maxLength: 150
+                  example: joao@email.com
+                senha:
+                  type: string
+                  minLength: 6
+                  maxLength: 100
+                  example: senha123
+      responses:
+        '201':
+          description: Cadastro realizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cadastro realizado com sucesso
+                  id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                camposObrigatorios:
+                  value:
+                    errors:
+                      - field: geral
+                        message: Preenchimento obrigatório do(s) campo(s)
+                emailInvalido:
+                  value:
+                    errors:
+                      - field: email
+                        message: Formato de e-mail inválido
+                maxCaracteres:
+                  value:
+                    errors:
+                      - field: nome
+                        message: Número máximo de caracteres excedido
+        '409':
+          description: E-mail já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: email
+                    message: E-mail já cadastrado
+
+  /login:
+    post:
+      summary: Autenticar usuário
+      tags: [Autenticação]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, senha]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: joao@email.com
+                senha:
+                  type: string
+                  example: senha123
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Campos obrigatórios não preenchidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                emailNaoCadastrado:
+                  value:
+                    errors:
+                      - field: email
+                        message: E-mail não cadastrado
+                senhaIncorreta:
+                  value:
+                    errors:
+                      - field: senha
+                        message: Senha incorreta
+
+  /users/me:
+    delete:
+      summary: Excluir própria conta
+      tags: [Usuários]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Conta excluída com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Conta excluída com sucesso
+        '401':
+          description: Token não fornecido ou inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Registro não encontrado
+
+  /recipes:
+    get:
+      summary: Listar receitas
+      tags: [Receitas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: scope
+          required: true
+          schema:
+            type: string
+            enum: [me, all]
+          description: "'me' retorna receitas próprias e favoritadas; 'all' retorna todas"
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtro por nome (busca parcial, case insensitive)
+        - in: query
+          name: ingrediente
+          schema:
+            type: string
+          description: Filtro por ingrediente (busca parcial, case insensitive)
+      responses:
+        '200':
+          description: Lista de receitas
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/RecipeResponse'
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Nenhuma receita encontrada para os filtros informados
+                      data:
+                        type: array
+                        items: {}
+        '400':
+          description: Parâmetro scope inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                scopeAusente:
+                  value:
+                    errors:
+                      - field: scope
+                        message: O parâmetro scope é obrigatório
+                scopeInvalido:
+                  value:
+                    errors:
+                      - field: scope
+                        message: "Valor inválido para scope. Use 'me' ou 'all'"
+        '401':
+          description: Token não fornecido ou inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Cadastrar receita
+      tags: [Receitas]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, ingredientes, modoPreparo, nivelDificuldade]
+              properties:
+                nome:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  example: Bolo de Chocolate
+                link:
+                  type: string
+                  maxLength: 300
+                  example: https://exemplo.com/receita
+                ingredientes:
+                  type: array
+                  minItems: 2
+                  maxItems: 50
+                  items:
+                    type: string
+                  example: [farinha, açúcar, chocolate, ovos]
+                modoPreparo:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+                  example: Misture todos os ingredientes e leve ao forno por 40 minutos.
+                nivelDificuldade:
+                  type: string
+                  enum: [Facil, Media, Dificil]
+                  example: Media
+                categoria:
+                  type: string
+                  enum: [Doce, Salgada, Sem_gluten, Sem_lactose, Sem_acucar_refinado]
+                  example: Doce
+                tempoPreparo:
+                  type: string
+                  pattern: '^\d{2}:\d{2}$'
+                  example: "01:00"
+                notas:
+                  type: string
+                  maxLength: 500
+                  example: Servir gelado
+      responses:
+        '201':
+          description: Receita cadastrada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Registro cadastrado com sucesso!
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Receita já existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: nome
+                    message: Registro já existente
+
+  /recipes/{id}:
+    put:
+      summary: Editar receita
+      tags: [Receitas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, ingredientes, modoPreparo, nivelDificuldade]
+              properties:
+                nome:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  example: Bolo de Chocolate Especial
+                link:
+                  type: string
+                  maxLength: 300
+                  example: https://exemplo.com/receita
+                ingredientes:
+                  type: array
+                  minItems: 2
+                  maxItems: 50
+                  items:
+                    type: string
+                  example: [farinha, açúcar, chocolate amargo, ovos]
+                modoPreparo:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+                  example: Misture todos e leve ao forno por 45 minutos a 180 graus.
+                nivelDificuldade:
+                  type: string
+                  enum: [Facil, Media, Dificil]
+                  example: Dificil
+                categoria:
+                  type: string
+                  enum: [Doce, Salgada, Sem_gluten, Sem_lactose, Sem_acucar_refinado]
+                  example: Doce
+                tempoPreparo:
+                  type: string
+                  pattern: '^\d{2}:\d{2}$'
+                  example: "01:30"
+                notas:
+                  type: string
+                  maxLength: 500
+                  example: Servir com sorvete
+      responses:
+        '200':
+          description: Receita atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Registro atualizado com sucesso
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Ação não permitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Ação não permitida
+        '404':
+          description: Receita não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Registro não encontrado
+        '409':
+          description: Nome já existe em outra receita do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: nome
+                    message: Registro já existente
+    delete:
+      summary: Excluir receita
+      tags: [Receitas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receita excluída com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Registro excluído com sucesso
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Ação não permitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Ação não permitida
+        '404':
+          description: Receita não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Registro não encontrado
+
+  /recipes/{id}/favorite:
+    post:
+      summary: Favoritar receita
+      tags: [Receitas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receita favoritada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Receita favoritada com sucesso
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Não é permitido favoritar sua própria receita
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Não é permitido favoritar sua própria receita
+        '404':
+          description: Receita não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Receita já favoritada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors:
+                  - field: id
+                    message: Receita já favoritada
