@@ -12,6 +12,31 @@ A API permite:
 - Busca de receitas por nome e/ou ingrediente, com escopo `me` (próprias + favoritadas) ou `all` (todas)
 - Favoritar receitas de outros usuários
 - Persistência em memória (sem banco de dados)
+  
+---
+
+## Endpoints
+
+| Método | Rota | Autenticação | Descrição |
+|--------|------|:---:|-----------|
+| POST | `/users` | Não | Cadastrar usuário |
+| DELETE | `/users/me` | Sim | Excluir conta |
+| POST | `/login` | Não | Autenticar e obter token JWT |
+| GET | `/recipes` | Sim | Listar receitas (scope: `me` ou `all`) |
+| POST | `/recipes` | Sim | Cadastrar receita |
+| PUT | `/recipes/:id` | Sim | Editar receita |
+| DELETE | `/recipes/:id` | Sim | Excluir receita |
+| POST | `/recipes/:id/favorite` | Sim | Favoritar receita |
+
+---
+
+## Swagger
+
+Documentação interativa disponível após iniciar o servidor:
+
+```
+http://localhost:3000/docs
+```
 
 ---
 
@@ -123,30 +148,6 @@ k6 run --env BASE_URL=http://localhost:4000 tests/performance/load.test.js
 | `stress.test.js` | Stress | até 100 | ~6min | Encontrar o ponto de ruptura da API |
 | `spike.test.js` | Spike | 5 → 50 | ~4.5min | Verificar recuperação após pico repentino |
 
----
-
-## Endpoints
-
-| Método | Rota | Autenticação | Descrição |
-|--------|------|:---:|-----------|
-| POST | `/users` | Não | Cadastrar usuário |
-| DELETE | `/users/me` | Sim | Excluir conta |
-| POST | `/login` | Não | Autenticar e obter token JWT |
-| GET | `/recipes` | Sim | Listar receitas (scope: `me` ou `all`) |
-| POST | `/recipes` | Sim | Cadastrar receita |
-| PUT | `/recipes/:id` | Sim | Editar receita |
-| DELETE | `/recipes/:id` | Sim | Excluir receita |
-| POST | `/recipes/:id/favorite` | Sim | Favoritar receita |
-
----
-
-## Swagger
-
-Documentação interativa disponível após iniciar o servidor:
-
-```
-http://localhost:3000/docs
-```
 
 ---
 
