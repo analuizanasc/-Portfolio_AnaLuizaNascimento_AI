@@ -30,16 +30,6 @@ A API permite:
 
 ---
 
-## Swagger
-
-Documentação interativa disponível após iniciar o servidor:
-
-```
-http://localhost:3000/docs
-```
-
----
-
 ## Setup
 
 **Pré-requisitos:** Node.js >= 18
@@ -62,6 +52,16 @@ npm run dev
 
 O servidor sobe na porta `3000` por padrão.  
 Variável de ambiente opcional: `PORT=4000 npm start`
+
+---
+
+## Swagger
+
+Documentação interativa disponível após iniciar o servidor:
+
+```
+http://localhost:3000/docs
+```
 
 ---
 
