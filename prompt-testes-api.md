@@ -1,5 +1,34 @@
 PROMPT:
 
+Objetivo: usar /supertest-skill para criar casos de teste com superTest
+
+Contexto:
+-O arquivo @test-plan-recipe-api.md  tem um plano de teste que deve ser seguido para a criação dos tests solicitados.
+- Os casos de testes que devem ser criados devem ser criados a partir da utilização da técnica de teste elencada em cada regra no plano de teste.
+- Utilizar as massas no fixtures 
+- Utilize o swagger da aplicação contido em /docs/swagger.yaml para obter as informações relevantes do teste.
+
+Regras 
+- Não me pergunte nada, só faça. 
+- Faça uso de Data-Driven Testing, extraindo os dados do teste e colocando em arquivos de fixture, para permitir que seja mais fácil controlar as informações usadas no teste (Corpo da Requisição e Corpo da Resposta) 
+- Crie uma pasta específica para armazenar os testes (src/test/api)
+- Implemente a execução dos testes com geração de relatório com a biblioteca mochawesome, de modo a rodar com e sem a geração de relatórios. 
+- Use o arquivo Swagger apresentado no contexto para definir como interagir com a API. 
+-  Não me pergunte se desejo prosseguir, apenas implemente o código.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Regras de Negócio da API
 Autenticação
 Toda rota de receita e exclusão de conta exige token JWT no header Authorization: Bearer <token>
